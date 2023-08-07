@@ -1,7 +1,7 @@
 // routes/blogRoutes.js
 const express = require("express");
 const blogController = require("../controllers/blog");
-const authMiddleware = require("../middleware/authMiddlewares");
+const authMiddleware = require("../middlewares/authMiddlewares");
 
 const router = express.Router();
 

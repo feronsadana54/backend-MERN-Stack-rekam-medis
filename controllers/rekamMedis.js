@@ -1,167 +1,237 @@
-// controllers/rekamMedis.js
 const RekamMedis = require("../models/rekamMedis");
-const User = require("../models/user");
+const SubRekamMedis = require("../models/subRekamMedis");
+const nodemailer = require("nodemailer");
+const Mailgen = require("mailgen");
+require("dotenv").config();
 
-// Fungsi untuk menambahkan rekam medis baru
-exports.addRekamMedis = async (req, res) => {
-  try {
-    const { idUser, tanggalMedis, noRekamMedis, keterangan } = req.body;
-    // Cek apakah noRekamMedis sudah ada di database
-    const existingRekamMedis = await RekamMedis.findOne({ noRekamMedis });
-    if (existingRekamMedis) {
-      return res.status(400).json({ message: "No Rekam Medis already exists" });
+const kirimEmail = async (nama, tanggal, pesan, penerima) => {
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    secure: false,
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+  });
+
+  const mailGenerator = new Mailgen({
+    theme: "default",
+    product: {
+      name: "Poli Bidan",
+      link: "https://mailgen.js/",
+    },
+  });
+
+  const mail = {
+    body: {
+      name: nama,
+      intro: "Permintaan Konfirmasi Rekam Medis",
+      table: {
+        data: [
+          {
+            pesan,
+          },
+        ],
+      },
+      outro: "Terima kasih",
+    },
+  };
+
+  const notes = mailGenerator.generate(mail);
+
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: penerima,
+    subject: "Permintaan Konfirmasi Pemeriksaan Rekam Medis",
+    html: notes,
+  };
+  await transporter.sendMail(mailOptions, (error, info) => {
+    if (error) {
+      return error;
+    } else {
+      return "Email berhasil dikirim!";
     }
+  });
 
-    // Buat rekam medis baru
-    const newRekamMedis = new RekamMedis({
-      idUser,
-      tanggalMedis,
-      noRekamMedis,
-      keterangan,
+  // Kirim email pengingat 3 hari sebelum tanggal pemeriksaan
+  const reminderDate = new Date(tanggal);
+  reminderDate.setDate(reminderDate.getDate() - 3);
+
+  let now = new Date();
+  let nowDate = now.toLocaleString("id-ID", { timeZone: "Indonesia/Jakarta" });
+  if (nowDate <= reminderDate) {
+    transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        return error;
+      } else {
+        return `Email sent: ${info.response}`;
+      }
     });
+  }
+};
 
-    // Simpan rekam medis baru ke database
-    await newRekamMedis.save();
-
-    res.status(201).json({ message: "Rekam Medis added successfully" });
+const addRekamMedisByUser = async (req, res) => {
+  const user = req.user;
+  const idUser = user._id;
+  const date = new Date().toLocaleString("id-ID", {
+    timeZone: "Indonesia/Jakarta",
+  });
+  try {
+    const findRekamMedis = await RekamMedis.find({ idUser });
+    if (findRekamMedis.length > 0) {
+      res.status(406).json({
+        message:
+          "Anda sudah meminta jadwal rekam medis. harap menunggu konfirmasi.",
+      });
+    } else {
+      if (user.isAdmin === false) {
+        const addRekamMedis = new RekamMedis({
+          idUser: user._id,
+          nama: user.nama,
+          email: user.email,
+          alamat: user.alamat,
+          nomorHandphone: user.nomorHandphone,
+        });
+        await addRekamMedis.save();
+        await kirimEmail(
+          user.nama,
+          date,
+          "Rekam medis sedang dibuat. Diharapkan dalam tiga hari kedepan anda melakukan konfirmasi di poli bidan.",
+          user.email
+        );
+        res
+          .status(201)
+          .json({ data: addRekamMedis, message: "add data successfully" });
+      } else {
+        res.status(406).json({
+          message:
+            "anda adalah pegawai, tolong konfirmasi rekam medis yang ada",
+        });
+      }
+    }
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// Fungsi untuk mendapatkan semua rekam medis
-exports.getAllRekamMedis = async (req, res) => {
+// mengambil semua data yang belum dikonfirmasi
+const getConfirmByAdmin = async (req, res) => {
   try {
-    const rekamMedis = await RekamMedis.find();
-    res.json(rekamMedis);
+    const findRekamMedis = await RekamMedis.find({ isConfirm: false });
+    res.status(200).json({ data: findRekamMedis });
   } catch (error) {
-    res.status(500).json({ message: "Internal Server Error" });
+    res.status(500).json({ message: error.message });
   }
 };
 
-// Fungsi untuk mengubah data rekam medis
-exports.editRekamMedis = async (req, res) => {
+// mengambil semua data yang sudah dikonfirmasi
+const getRMConfirmByAdmin = async (req, res) => {
   try {
-    const rekamMedisId = req.params.rekamMedisId;
-    const { tanggalMedis, noRekamMedis, keterangan } = req.body;
+    const findRekamMedis = await RekamMedis.find({ isConfirm: true });
+    res.status(200).json({ data: findRekamMedis });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 
-    // Cari rekam medis berdasarkan ID
-    const rekamMedis = await RekamMedis.findById(rekamMedisId);
+// konfimasi admin
+const confirmByAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = req.user;
+    const date = new Date();
+    if (user.isAdmin == true) {
+      const rmById = await RekamMedis.findById(id);
+      rmById.isConfirm = true;
+      await rmById.save();
+      await kirimEmail(
+        rmById.nama,
+        date,
+        "Rekam medis sudah dikonfirmasi. Silahkan melakukan pemeriksaan :)",
+        rmById.email
+      );
+      res.status(200).json({ message: "Rekam Medis sudah dikonfirmasi!" });
+    } else {
+      res.status(404).json({ message: "URL tidak tersedia" });
+    }
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 
-    // Jika rekam medis tidak ditemukan
+// Fungsi untuk mengedit rekam medis oleh admin
+const editRekamMedis = async (req, res) => {
+  const { id } = req.params;
+  const { alamat, nomorHandphone } = req.body;
+  const { isAdmin } = req.user;
+
+  try {
+    const rekamMedis = await RekamMedis.findById(id);
     if (!rekamMedis) {
-      return res.status(404).json({ message: "Rekam Medis not found" });
+      return res.status(404).json({ message: "Rekam medis tidak ditemukan" });
     }
 
-    // Update data rekam medis
-    rekamMedis.tanggalMedis = tanggalMedis;
-    rekamMedis.noRekamMedis = noRekamMedis;
-    rekamMedis.keterangan = keterangan;
+    if (isAdmin == false) {
+      res.status(404).json({ message: "URL tidak tersedia" });
+    } else {
+      // Update keterangan dan tanggal pemeriksaan selanjutnya
+      rekamMedis.alamat = alamat;
+      rekamMedis.nomorHandphone = nomorHandphone;
+      await rekamMedis.save();
 
-    // Simpan perubahan
-    await rekamMedis.save();
-
-    // Kirim respons berhasil
-    res.json({ message: "Rekam Medis data updated successfully" });
+      res.status(200).json({ message: "Rekam medis berhasil diubah" });
+    }
   } catch (error) {
+    console.log(error);
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
 
-// Fungsi untuk menghapus rekam medis
-exports.hapusRekamMedis = async (req, res) => {
+// Fungsi untuk menghapus rekam medis oleh admin
+const deleteRekamMedis = async (req, res) => {
   try {
-    const rekamMedisId = req.params.rekamMedisId;
-
-    // Cari rekam medis berdasarkan ID
-    const rekamMedis = await RekamMedis.findById(rekamMedisId);
-
-    // Jika rekam medis tidak ditemukan
+    const { id } = req.params;
+    const { isAdmin } = req.user;
+    const rekamMedis = await RekamMedis.findById(id);
     if (!rekamMedis) {
-      return res.status(404).json({ message: "Rekam Medis not found" });
+      return res.status(404).json({ message: "Rekam medis tidak ditemukan" });
     }
-
-    // Hapus rekam medis
-    await rekamMedis.deleteOne();
-
-    // Kirim respons berhasil
-    res.json({ message: "Rekam Medis deleted successfully" });
+    if (isAdmin) {
+      // Hapus rekam medis
+      await rekamMedis.deleteOne();
+      await SubRekamMedis.deleteMany({ idRekamMedis: id });
+      res.status(200).json({ message: "Rekam medis berhasil dihapus" });
+    } else {
+      res.status(404).json({ message: "URL tidak ditemukan." });
+    }
   } catch (error) {
+    console.log(error);
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
 
-// Fungsi untuk mendapatkan history rekam medis untuk user tertentu
-exports.historyUser = async (req, res) => {
+// Fungsi untuk melihat daftar user isAdmin false yang sudah melakukan rekam medis
+const rekamMedisAll = async (req, res) => {
   try {
-    const userId = req.params.userId;
-
-    // Cari user berdasarkan ID
-    const user = await User.findById(userId);
-
-    // Jika user tidak ditemukan
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
+    const { isAdmin } = req.user;
+    if (isAdmin) {
+      const rekamMedis = await RekamMedis.find();
+      res.status(200).json({ data: rekamMedis });
+    } else {
+      res.status(404).json({ message: "URL tidak ditemukan." });
     }
-
-    // Cari semua rekam medis yang terkait dengan user
-    const rekamMedis = await RekamMedis.find({ idUser: userId });
-
-    // Kirim respons
-    res.json({ user, rekamMedis });
   } catch (error) {
+    console.log(error);
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
 
-// Fungsi untuk mengubah data history rekam medis
-exports.editHistoryRekamMedis = async (req, res) => {
-  try {
-    const rekamMedisId = req.params.rekamMedisId;
-    const { tanggalMedis, noRekamMedis, keterangan } = req.body;
-
-    // Cari rekam medis berdasarkan ID
-    const rekamMedis = await RekamMedis.findById(rekamMedisId);
-
-    // Jika rekam medis tidak ditemukan
-    if (!rekamMedis) {
-      return res.status(404).json({ message: "Rekam Medis not found" });
-    }
-
-    // Update data rekam medis
-    rekamMedis.tanggalMedis = tanggalMedis;
-    rekamMedis.noRekamMedis = noRekamMedis;
-    rekamMedis.keterangan = keterangan;
-
-    // Simpan perubahan
-    await rekamMedis.save();
-
-    // Kirim respons berhasil
-    res.json({ message: "Rekam Medis data updated successfully" });
-  } catch (error) {
-    res.status(500).json({ message: "Internal Server Error" });
-  }
-};
-
-// Fungsi untuk menghapus history rekam medis
-exports.hapusHistoryRekamMedis = async (req, res) => {
-  try {
-    const rekamMedisId = req.params.rekamMedisId;
-
-    // Cari rekam medis berdasarkan ID
-    const rekamMedis = await RekamMedis.findById(rekamMedisId);
-
-    // Jika rekam medis tidak ditemukan
-    if (!rekamMedis) {
-      return res.status(404).json({ message: "Rekam Medis not found" });
-    }
-
-    // Hapus rekam medis
-    await rekamMedis.deleteOne();
-
-    // Kirim respons berhasil
-    res.json({ message: "Rekam Medis deleted successfully" });
-  } catch (error) {
-    res.status(500).json({ message: "Internal Server Error" });
-  }
+module.exports = {
+  addRekamMedisByUser,
+  getConfirmByAdmin,
+  getRMConfirmByAdmin,
+  confirmByAdmin,
+  editRekamMedis,
+  deleteRekamMedis,
+  rekamMedisAll,
 };

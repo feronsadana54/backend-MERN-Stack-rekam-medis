@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const userController = require("../controllers/users");
-const authMiddleware = require("../middleware/authMiddlewares");
+const authMiddleware = require("../middlewares/authMiddlewares");
 
 // Register User
 router.post("/register", userController.registerUser);
@@ -10,7 +10,14 @@ router.post("/register", userController.registerUser);
 router.post("/login", userController.loginUser);
 
 // Get All Users (requires authentication)
-router.get("/getAll", authMiddleware.checkAuth, userController.getAllUsers);
+router.get("/getAll", authMiddleware.checkAuth, userController.changeAdmin);
+
+// Get All Users (requires authentication)
+router.put(
+  "/change-admin/:idUser",
+  authMiddleware.checkAuth,
+  userController.changeAdmin
+);
 
 // Edit User (requires authentication)
 router.put(

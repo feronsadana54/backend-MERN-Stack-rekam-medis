@@ -1,27 +1,43 @@
-// models/rekamMedis.js
 const mongoose = require("mongoose");
-const Schema = mongoose.Schema;
 
-const rekamMedisSchema = new Schema({
-  idUser: {
-    type: Schema.Types.ObjectId,
-    ref: "User",
-    required: true,
+const rekamMedisSchema = new mongoose.Schema(
+  {
+    idUser: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    nama: {
+      type: String,
+      ref: "User",
+      required: true,
+    },
+    email: {
+      type: String,
+      ref: "User",
+      required: true,
+    },
+    alamat: {
+      type: String,
+      ref: "User",
+    },
+    nomorHandphone: {
+      type: String,
+      ref: "User",
+      required: true,
+    },
+    tanggal: {
+      type: Date,
+      default: Date.now,
+    },
+    isConfirm: {
+      type: Boolean,
+      default: false,
+    },
   },
-  tanggalMedis: {
-    type: Date,
-    required: true,
-  },
-  noRekamMedis: {
-    type: String,
-    required: true,
-    unique: true,
-  },
-  keterangan: {
-    type: String,
-  },
-});
+  { timestamps: true }
+);
 
-const RekamMedis = mongoose.model("rekammedis", rekamMedisSchema);
+const RekamMedis = mongoose.model("RekamMedis", rekamMedisSchema);
 
 module.exports = RekamMedis;

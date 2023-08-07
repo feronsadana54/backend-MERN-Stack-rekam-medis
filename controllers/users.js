@@ -121,6 +121,27 @@ exports.editUser = async (req, res) => {
   }
 };
 
+exports.changeAdmin = async (req, res) => {
+  try {
+    const { idUser } = req.params;
+    const user = req.user;
+    if (user.isAdmin == false) {
+      res.status(404).json({ message: "URL tidak ditemukan" });
+    } else {
+      const findUser = await User.findById(idUser);
+      if (findUser.isAdmin == true) {
+        findUser.isAdmin = false;
+      } else {
+        findUser.isAdmin = true;
+      }
+      await findUser.save();
+      res.status(200).json({ message: "User isAdmin sudah berubah!" });
+    }
+  } catch (error) {
+    res.status(404).json({ message: error.message });
+  }
+};
+
 // Fungsi untuk mengubah password pengguna
 exports.changePassword = async (req, res) => {
   try {

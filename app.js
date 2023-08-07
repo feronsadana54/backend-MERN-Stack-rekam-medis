@@ -28,9 +28,11 @@ mongoose
 const usersRoutes = require("../backend/routes/users");
 const rekamMedisRoutes = require("../backend/routes/rekamMedis");
 const blogRoutes = require("../backend/routes/blog");
+const subRekamMedisRoutes = require("../backend/routes/subRekamMedis");
 
 app.use("/api/users", usersRoutes);
 app.use("/api/rekam-medis", rekamMedisRoutes);
+app.use("/api/sub-rekam-medis", subRekamMedisRoutes);
 app.use("/api/blog", blogRoutes);
 
 // Error handling untuk route tidak ditemukan

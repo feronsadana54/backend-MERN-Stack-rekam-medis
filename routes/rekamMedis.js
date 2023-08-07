@@ -1,36 +1,54 @@
 const express = require("express");
 const router = express.Router();
 const rekamMedisController = require("../controllers/rekamMedis");
-const authMiddleware = require("../middleware/authMiddlewares");
+const authMiddleware = require("../middlewares/authMiddlewares");
 
-// Middleware untuk semua rute rekam medis
-router.use(authMiddleware.checkAuth);
-
-// Endpoint untuk menambahkan rekam medis
-router.post("/", rekamMedisController.addRekamMedis);
-
-// Endpoint untuk mendapatkan semua rekam medis
-router.get("/", rekamMedisController.getAllRekamMedis);
-
-// Endpoint untuk mengubah rekam medis berdasarkan ID
-router.put("/:rekamMedisId", rekamMedisController.editRekamMedis);
-
-// Endpoint untuk menghapus rekam medis berdasarkan ID
-router.delete("/:rekamMedisId", rekamMedisController.hapusRekamMedis);
-
-// Endpoint untuk mendapatkan history rekam medis user
-router.get("/history/:userId", rekamMedisController.historyUser);
-
-// Endpoint untuk mengubah history rekam medis user berdasarkan ID
-router.put(
-  "/history/:rekamMedisId",
-  rekamMedisController.editHistoryRekamMedis
+// Menambahkan rekam medis untuk user not admin
+router.post(
+  "/addRekamMedis",
+  authMiddleware.checkAuth,
+  rekamMedisController.addRekamMedisByUser
 );
 
-// Endpoint untuk menghapus history rekam medis user berdasarkan ID
+// konfirmasi rekam medis dari admin
+router.get(
+  "/daftar-rm-dikonfirmasi",
+  authMiddleware.checkAuth,
+  rekamMedisController.getConfirmByAdmin
+);
+
+// ambil rekam medis yang sudah di konfirmasi dari admin
+router.get(
+  "/rekam-medis-confirm",
+  authMiddleware.checkAuth,
+  rekamMedisController.getRMConfirmByAdmin
+);
+
+router.put(
+  "/konfirmasi-rekam-medis/:id",
+  authMiddleware.checkAuth,
+  rekamMedisController.confirmByAdmin
+);
+
+// Mengedit rekam medis oleh admin
+router.put(
+  "/:id",
+  authMiddleware.checkAuth,
+  rekamMedisController.editRekamMedis
+);
+
+// Menghapus rekam medis oleh admin
 router.delete(
-  "/history/:rekamMedisId",
-  rekamMedisController.hapusHistoryRekamMedis
+  "/:id",
+  authMiddleware.checkAuth,
+  rekamMedisController.deleteRekamMedis
+);
+
+// Melihat daftar user isAdmin false yang sudah melakukan rekam medis
+router.get(
+  "/all",
+  authMiddleware.checkAuth,
+  rekamMedisController.rekamMedisAll
 );
 
 module.exports = router;
