@@ -58,7 +58,7 @@ const kirimEmail = async (nama, tanggal, pesan, penerima) => {
   reminderDate.setDate(reminderDate.getDate() - 3);
 
   let now = new Date();
-  let nowDate = now.toLocaleString("id-ID", { timeZone: "Indonesia/Jakarta" });
+  let nowDate = now.toLocaleString("id-ID", { timeZone: "Asia/Jakarta" });
   if (nowDate <= reminderDate) {
     transporter.sendMail(mailOptions, (error, info) => {
       if (error) {
@@ -74,7 +74,7 @@ const addRekamMedisByUser = async (req, res) => {
   const user = req.user;
   const idUser = user._id;
   const date = new Date().toLocaleString("id-ID", {
-    timeZone: "Indonesia/Jakarta",
+    timeZone: "Asia/Jakarta",
   });
   try {
     const findRekamMedis = await RekamMedis.find({ idUser });
@@ -126,9 +126,14 @@ const getConfirmByAdmin = async (req, res) => {
 
 // mengambil semua data yang sudah dikonfirmasi
 const getRMConfirmByAdmin = async (req, res) => {
+  const user = req.user;
   try {
-    const findRekamMedis = await RekamMedis.find({ isConfirm: true });
-    res.status(200).json({ data: findRekamMedis });
+    if (user.isAdmin == true) {
+      const findRekamMedis = await RekamMedis.find({ isConfirm: true });
+      res.status(200).json({ data: findRekamMedis });
+    } else {
+      res.status(404).json({ message: "URL tidak ditemukan." });
+    }
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -159,6 +164,20 @@ const confirmByAdmin = async (req, res) => {
   }
 };
 
+// fungsi untuk mengambil rekam medis by id
+const getRekamMedisById = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const findRekamMedis = await RekamMedis.find({ idUser: id });
+    res.status(200).json({
+      data: findRekamMedis,
+      message: "Data Berhasil diambil",
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // Fungsi untuk mengedit rekam medis oleh admin
 const editRekamMedis = async (req, res) => {
   const { id } = req.params;
@@ -182,7 +201,6 @@ const editRekamMedis = async (req, res) => {
       res.status(200).json({ message: "Rekam medis berhasil diubah" });
     }
   } catch (error) {
-    console.log(error);
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
@@ -205,7 +223,6 @@ const deleteRekamMedis = async (req, res) => {
       res.status(404).json({ message: "URL tidak ditemukan." });
     }
   } catch (error) {
-    console.log(error);
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
@@ -221,7 +238,6 @@ const rekamMedisAll = async (req, res) => {
       res.status(404).json({ message: "URL tidak ditemukan." });
     }
   } catch (error) {
-    console.log(error);
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
@@ -234,4 +250,5 @@ module.exports = {
   editRekamMedis,
   deleteRekamMedis,
   rekamMedisAll,
+  getRekamMedisById,
 };

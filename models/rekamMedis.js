@@ -24,7 +24,6 @@ const rekamMedisSchema = new mongoose.Schema(
     nomorHandphone: {
       type: String,
       ref: "User",
-      required: true,
     },
     tanggal: {
       type: Date,

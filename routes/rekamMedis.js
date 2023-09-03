@@ -17,9 +17,16 @@ router.get(
   rekamMedisController.getConfirmByAdmin
 );
 
+// route get rekam medis by id
+router.get(
+  "/get-rekam-medis/:id",
+  authMiddleware.checkAuth,
+  rekamMedisController.getRekamMedisById
+);
+
 // ambil rekam medis yang sudah di konfirmasi dari admin
 router.get(
-  "/rekam-medis-confirm",
+  "/rekamMedisConfirm",
   authMiddleware.checkAuth,
   rekamMedisController.getRMConfirmByAdmin
 );

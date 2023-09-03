@@ -130,6 +130,7 @@ const editSubRekamMedis = async (req, res) => {
     const findRkm = await RekamMedis.findById(id);
     const findSubRkm = await SubRekamMedis.findById(idSub);
     const date = new Date(tanggalPemeriksaan);
+    console.log(date);
     if (isAdmin == false) {
       res.status(404).json({ message: "URL tidak ditemukan" });
     } else {
@@ -155,23 +156,37 @@ const editSubRekamMedis = async (req, res) => {
   }
 };
 
+// Get Sub Rekam Medis By Id
 const getSubRekamMedisById = async (req, res) => {
   try {
     const { id } = req.params;
-    const { isAdmin } = req.user;
-    if (isAdmin) {
-      const findSubRekamMedis = await SubRekamMedis.find({ idRekamMedis: id });
-      if (findSubRekamMedis <= 0) {
-        res.status(404).json({ message: "Data kosong" });
-      } else {
-        res.status(200).json({
-          message: "Berhasil mengambil data.",
-          data: findSubRekamMedis,
-        });
-      }
+    const findSubRekamMedis = await SubRekamMedis.find({ idRekamMedis: id });
+    if (findSubRekamMedis.length <= 0) {
+      res.json({
+        message: "Data kosong / belum diisi silahkan lakukan pemeriksaan",
+        data: findSubRekamMedis,
+      });
     } else {
-      res.status(404).json({ message: "URL tidak ditemukan." });
+      res.status(200).json({
+        message: "Berhasil mengambil data.",
+        data: findSubRekamMedis,
+      });
     }
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// / Get Sub Rekam Medis By ID For Edit
+const getSubRekamMedisByIdForEdit = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const findSubRekamMedis = await SubRekamMedis.findById(id);
+    res.status(200).json({
+      message: "Berhasil mengambil data.",
+      data: findSubRekamMedis,
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -200,4 +215,5 @@ module.exports = {
   editSubRekamMedis,
   getSubRekamMedisById,
   deleteSubRekamMedisById,
+  getSubRekamMedisByIdForEdit,
 };

@@ -18,11 +18,13 @@ exports.registerUser = async (req, res) => {
     } = req.body;
 
     // Cek apakah email atau username sudah terdaftar sebelumnya
-    const existingUser = await User.findOne({ $or: [{ email }, { username }] });
+    const existingUser = await User.findOne({
+      $or: [{ email }, { username }, { noIdentitas }],
+    });
     if (existingUser) {
-      return res
-        .status(400)
-        .json({ message: "Email or username already exists" });
+      return res.status(400).json({
+        message: "Email, username atau nomor identitas sudah digunakan.",
+      });
     }
 
     // Enkripsi password sebelum disimpan ke database
@@ -38,6 +40,7 @@ exports.registerUser = async (req, res) => {
       alamat,
       nomorHandphone,
       noIdentitas,
+      fotoProfil: "",
     });
 
     res
@@ -58,13 +61,22 @@ exports.loginUser = async (req, res) => {
 
     // Jika pengguna tidak ditemukan atau password tidak cocok, beri respon error
     if (!user || !(await bcrypt.compare(password, user.password))) {
-      return res.status(401).json({ message: "Invalid username or password" });
+      return res.status(401).json({ message: "Username atau password salah!" });
     }
 
     // Buat token JWT untuk pengguna yang berhasil login
-    const token = jwt.sign({ userId: user._id }, process.env.SECRET_KEY, {
-      expiresIn: "1h",
-    });
+    const token = jwt.sign(
+      {
+        userId: user._id,
+        username: user.username,
+        nama: user.nama,
+        isAdmin: user.isAdmin,
+      },
+      process.env.SECRET_KEY,
+      {
+        expiresIn: "24h",
+      }
+    );
 
     res.status(200).json({ message: "Login successful", token });
   } catch (error) {
@@ -81,40 +93,78 @@ exports.getAllUsers = async (req, res) => {
   }
 };
 
+exports.getAllUsersAdmin = async (req, res) => {
+  try {
+    const users = await User.find({ isAdmin: true }, "-password");
+    res.status(200).json({ message: "Data Berhasil di ambil", data: users });
+  } catch (error) {
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+exports.getAllUsersNotAdmin = async (req, res) => {
+  try {
+    const users = await User.find({ isAdmin: false }, "-password");
+    res.status(200).json({ message: "Data Berhasil di ambil", data: users });
+  } catch (error) {
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+exports.getUserById = async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const user = await User.findById(userId);
+    res.status(200).json({ message: "Get Data Sucessfully", data: user });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 exports.editUser = async (req, res) => {
   try {
     const userId = req.params.userId;
     const {
       nama,
       email,
-      isAdmin,
+      username,
       tanggalLahir,
       alamat,
       nomorHandphone,
       noIdentitas,
+      fotoProfil,
     } = req.body;
 
     // Cari user berdasarkan ID
     const user = await User.findById(userId);
 
-    // Jika user tidak ditemukan
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
+    // Cek apakah email atau username sudah terdaftar sebelumnya
+    const existingUser = await User.findOne({
+      $or: [{ email }, { username }, { noIdentitas }],
+    });
+    if (existingUser) {
+      if (username == existingUser.username) {
+        user.username = existingUser.username;
+      } else {
+        user.username = username;
+      }
+      if (email == existingUser.email) {
+        user.email = existingUser.email;
+      } else {
+        user.email = email;
+      }
+      if (noIdentitas == existingUser.noIdentitas) {
+        user.noIdentitas = existingUser.noIdentitas;
+      } else {
+        user.noIdentitas = noIdentitas;
+      }
     }
-
-    // Update data pengguna
     user.nama = nama;
-    user.email = email;
-    user.isAdmin = isAdmin;
     user.tanggalLahir = tanggalLahir;
     user.alamat = alamat;
     user.nomorHandphone = nomorHandphone;
-    user.noIdentitas = noIdentitas;
-
-    // Simpan perubahan
+    user.fotoProfil = fotoProfil;
     await user.save();
-
-    // Kirim respons berhasil
     res.json({ message: "User data updated successfully", user });
   } catch (error) {
     res.status(500).json({ message: error.message });

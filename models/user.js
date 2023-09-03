@@ -36,6 +36,10 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  fotoProfil: {
+    type: String,
+    default: "",
+  },
 });
 
 const User = mongoose.model("User", userSchema);

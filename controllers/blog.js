@@ -5,22 +5,22 @@ const User = require("../models/user");
 // Fungsi untuk menambahkan blog baru
 exports.addBlog = async (req, res) => {
   try {
-    const { gambarBlog, judul, artikel, konten } = req.body;
+    const { gambarBlog, judul, artikel } = req.body;
+    const user = req.user;
 
     // Buat blog baru
     const newBlog = new Blog({
       gambarBlog,
+      penulis: user.nama,
       judul,
       artikel,
-      konten,
     });
 
-    // Simpan blog baru ke database
     await newBlog.save();
 
     res.status(201).json({ message: "Blog added successfully" });
   } catch (error) {
-    res.status(500).json({ message: "Internal Server Error" });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -34,11 +34,25 @@ exports.getAllBlog = async (req, res) => {
   }
 };
 
+exports.getTopBlogs = async (req, res) => {
+  try {
+    const topBlogs = await Blog.find()
+      .sort({
+        likes: -1,
+        views: -1,
+      })
+      .limit(10);
+    res.status(200).json(topBlogs);
+  } catch (error) {
+    res.status(500).json({ new: "lol", message: error.message });
+  }
+};
+
 // Fungsi untuk mengubah data blog
 exports.editBlog = async (req, res) => {
   try {
     const blogId = req.params.blogId;
-    const { gambarBlog, judul, artikel, konten } = req.body;
+    const { gambarBlog, judul, artikel } = req.body;
 
     // Cari blog berdasarkan ID
     const blog = await Blog.findById(blogId);
@@ -52,7 +66,6 @@ exports.editBlog = async (req, res) => {
     blog.gambarBlog = gambarBlog;
     blog.judul = judul;
     blog.artikel = artikel;
-    blog.konten = konten;
 
     // Simpan perubahan
     await blog.save();
@@ -60,7 +73,7 @@ exports.editBlog = async (req, res) => {
     // Kirim respons berhasil
     res.json({ message: "Blog data updated successfully" });
   } catch (error) {
-    res.status(500).json({ message: "Internal Server Error" });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -89,27 +102,27 @@ exports.deleteBlog = async (req, res) => {
 
 // Fungsi untuk menambahkan like pada blog
 exports.addLike = async (req, res) => {
-  try {
-    const blogId = req.params.blogId;
+  const { blogId } = req.params;
+  const { liked } = req.body;
 
-    // Cari blog berdasarkan ID
+  try {
     const blog = await Blog.findById(blogId);
 
-    // Jika blog tidak ditemukan
     if (!blog) {
       return res.status(404).json({ message: "Blog not found" });
     }
 
-    // Tambah jumlah likes
-    blog.likes += 1;
+    if (liked) {
+      blog.likes += 1;
+    } else {
+      blog.likes -= 1;
+    }
 
-    // Simpan perubahan
     await blog.save();
 
-    // Kirim respons berhasil
-    res.json({ message: "Like added successfully" });
+    res.status(200).json({ message: "Like status updated successfully" });
   } catch (error) {
-    res.status(500).json({ message: "Internal Server Error" });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -117,32 +130,30 @@ exports.addLike = async (req, res) => {
 exports.addComment = async (req, res) => {
   try {
     const blogId = req.params.blogId;
-    const { comment, userId } = req.body;
+    const { comment, userId, penulis, profile } = req.body;
 
-    // Cari blog berdasarkan ID
     const blog = await Blog.findById(blogId);
 
-    // Jika blog tidak ditemukan
     if (!blog) {
       return res.status(404).json({ message: "Blog not found" });
     }
 
-    // Cari user yang sedang membuat comment
     const user = await User.findById(userId);
 
-    // Jika user tidak ditemukan
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Tambah comment ke blog
-    blog.comments.push({ user: user._id, comment });
+    blog.comments.push({
+      user: user._id,
+      comment,
+      penulis: user.nama,
+      profile: user.fotoProfil,
+    });
 
-    // Simpan perubahan
     await blog.save();
 
-    // Kirim respons berhasil
-    res.json({ message: "Comment added successfully" });
+    res.json({ message: "Comment added successfully", data: blog });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -227,3 +238,16 @@ exports.deleteComment = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+exports.getBlogById = async (req, res) => {
+  const { blogId } = req.params;
+  try {
+    await Blog.findByIdAndUpdate(blogId, { $inc: { views: 1 } });
+
+    const data = await Blog.findById(blogId);
+    res.status(200).json({ data });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+

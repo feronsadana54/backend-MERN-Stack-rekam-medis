@@ -10,9 +10,26 @@ router.post("/register", userController.registerUser);
 router.post("/login", userController.loginUser);
 
 // Get All Users (requires authentication)
-router.get("/getAll", authMiddleware.checkAuth, userController.changeAdmin);
+router.get("/getAll", authMiddleware.checkAuth, userController.getAllUsers);
 
-// Get All Users (requires authentication)
+// Get All Users Admin (requires authentication)
+router.get(
+  "/get-user-admin",
+  authMiddleware.checkAuth,
+  userController.getAllUsersAdmin
+);
+
+// Get All Users Not Admin (requires authentication)
+router.get(
+  "/get-user-not-admin",
+  authMiddleware.checkAuth,
+  userController.getAllUsersNotAdmin
+);
+
+// Get Data By Id
+router.get("/:userId", authMiddleware.checkAuth, userController.getUserById);
+
+// Get Change Admin (requires authentication)
 router.put(
   "/change-admin/:idUser",
   authMiddleware.checkAuth,

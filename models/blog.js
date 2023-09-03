@@ -4,7 +4,11 @@ const Schema = mongoose.Schema;
 
 const blogSchema = new Schema({
   gambarBlog: {
-    type: String, // Path gambar
+    type: String,
+  },
+  penulis: {
+    type: String,
+    required: true,
   },
   judul: {
     type: String,
@@ -13,11 +17,11 @@ const blogSchema = new Schema({
   artikel: {
     type: String,
   },
-  konten: {
-    type: String,
-    required: true,
-  },
   likes: {
+    type: Number,
+    default: 0,
+  },
+  views: {
     type: Number,
     default: 0,
   },
@@ -31,8 +35,22 @@ const blogSchema = new Schema({
         type: String,
         required: true,
       },
+      penulis: {
+        type: String,
+      },
+      profile: {
+        type: String,
+      },
+      createdAt: {
+        type: Date,
+        default: Date.now,
+      },
     },
   ],
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
 });
 
 const Blog = mongoose.model("Blog", blogSchema);

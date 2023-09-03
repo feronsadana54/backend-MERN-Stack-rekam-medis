@@ -22,8 +22,14 @@ router.get(
   subRekamMedis.getSubRekamMedisById
 );
 
+router.get(
+  "/sub-rm/:id",
+  authMiddleware.checkAuth,
+  subRekamMedis.getSubRekamMedisByIdForEdit
+);
+
 router.delete(
-  "/:id/hapus/:idSub",
+  "/hapus/:idSub",
   authMiddleware.checkAuth,
   subRekamMedis.deleteSubRekamMedisById
 );
