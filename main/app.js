@@ -20,10 +20,10 @@ mongoose
   .then(() => console.log("Connected to MongoDB"))
   .catch((err) => console.error("MongoDB connection error:", err));
 
-const usersRoutes = require("../backend/routes/users");
-const rekamMedisRoutes = require("../backend/routes/rekamMedis");
-const blogRoutes = require("../backend/routes/blog");
-const subRekamMedisRoutes = require("../backend/routes/subRekamMedis");
+const usersRoutes = require("../routes/users");
+const rekamMedisRoutes = require("../routes/rekamMedis");
+const blogRoutes = require("../routes/blog");
+const subRekamMedisRoutes = require("../routes/subRekamMedis");
 
 app.use("/api/users", usersRoutes);
 app.use("/api/rekam-medis", rekamMedisRoutes);
