@@ -112,7 +112,7 @@ exports.addLike = async (req, res) => {
       return res.status(404).json({ message: "Blog not found" });
     }
 
-    if (liked) {
+    if (liked || !liked) {
       blog.likes += 1;
     }
 
