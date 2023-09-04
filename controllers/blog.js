@@ -114,8 +114,6 @@ exports.addLike = async (req, res) => {
 
     if (liked) {
       blog.likes += 1;
-    } else {
-      blog.likes -= 1;
     }
 
     await blog.save();
@@ -250,4 +248,3 @@ exports.getBlogById = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-
