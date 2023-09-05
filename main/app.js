@@ -6,6 +6,15 @@ require("dotenv").config();
 
 const app = express();
 
+app.use((req, res, next) => {
+  res.header(
+    "Access-Control-Allow-Origin",
+    "https://bidan-care-app.vercel.app"
+  );
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  next();
+});
 app.use(cors());
 
 app.use(bodyParser.urlencoded({ extended: true, limit: "50mb" }));
